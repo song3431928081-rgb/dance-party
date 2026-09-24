@@ -142,7 +142,7 @@ function randomType() {
 
 function createDancer(x, y) {
   if (dancers.length >= MAX_DANCERS) return;
-  const baseSize = 60 + Math.random() * 30; // 60-90px
+  const baseSize = 110 + Math.random() * 50; // 110-160px — BIGGER!
   dancers.push({
     type: randomType(),
     x, y,
@@ -236,15 +236,6 @@ function render(time) {
   ctx.fillStyle = '#f5f3ef';
   ctx.fillRect(0, 0, W, H);
 
-  // Subtle grid dots
-  ctx.fillStyle = 'rgba(0,0,0,0.04)';
-  const gs = 40;
-  for (let x = gs; x < W; x += gs) {
-    for (let y = gs; y < H; y += gs) {
-      ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI*2); ctx.fill();
-    }
-  }
-
   // Beat pulse (whole screen breathes with music)
   const bp = getBeatProgress();
   const beatInfluence = Math.abs(Math.sin(bp * Math.PI));
@@ -257,28 +248,31 @@ function render(time) {
   // Draw each dancer
   const globalBeat = time / 1000;
   for (const d of dancers) {
-    // Beat-driven dance animation
+    // ===== WILD DANCE ANIMATION =====
     const dancePhase = globalBeat * d.danceSpeed + d.danceOffset;
 
-    // Hop bounce — every beat
-    const beatBounce = Math.abs(Math.sin(bp * Math.PI * 2 + d.danceOffset)) * 12;
-    const randomHop = Math.abs(Math.sin(dancePhase)) * 6;
+    // MASSIVE hop bounce — every beat
+    const beatBounce = Math.abs(Math.sin(bp * Math.PI * 2 + d.danceOffset)) * 26;
+    const randomHop = Math.abs(Math.sin(dancePhase)) * 14;
     const bounceY = beatBounce + randomHop;
 
-    // Sway / tilt
-    const sway = Math.sin(dancePhase * 0.6) * 0.25 + Math.sin(bp * Math.PI * 2) * 0.15;
+    // Wild swinging tilt — much bigger
+    const sway = Math.sin(dancePhase * 0.6) * 0.55 + Math.sin(bp * Math.PI * 2) * 0.35;
 
-    // Squash & stretch — strongest on beats
-    const beatSquash = 1 + Math.sin(bp * Math.PI * 2 + d.danceOffset) * 0.12;
-    const microStretch = 1 + Math.sin(dancePhase * 2) * 0.05;
+    // EXTREME squash & stretch on beats
+    const beatSquash = 1 + Math.sin(bp * Math.PI * 2 + d.danceOffset) * 0.28;
+    const microStretch = 1 + Math.sin(dancePhase * 2.5) * 0.12;
     const sx = beatSquash * microStretch;
-    const sy = 1 / beatSquash * (2 - microStretch); // preserves volume
+    const sy = 1 / beatSquash * (2 - microStretch);
 
-    // Step animation (leg lift impression via y-offset wiggle)
-    const stepWiggle = Math.sin(dancePhase * 1.5) * 4;
+    // Big step wiggle (side to side + forward lean)
+    const stepWiggle = Math.sin(dancePhase * 1.5) * 12;
 
-    // Arm wave (rotation of shadow + extra tilt illusion)
-    const armTilt = Math.sin(dancePhase * 2) * 0.1;
+    // Chaotic arm wave rotation
+    const armTilt = Math.sin(dancePhase * 2.5) * 0.22 + Math.cos(dancePhase * 1.2) * 0.1;
+
+    // Whole-body spin kick for extra chaos
+    const spinKick = Math.sin(dancePhase * 0.4) * 0.18;
 
     const size = d.baseSize * d.scaleX;
 
@@ -292,16 +286,16 @@ function render(time) {
 
     // Shadow on ground
     ctx.save();
-    ctx.fillStyle = `rgba(0,0,0,${0.12 * d.scaleY})`;
+    ctx.fillStyle = `rgba(0,0,0,${0.15 * d.scaleY})`;
     ctx.beginPath();
-    ctx.ellipse(d.x, d.y + d.radius * 0.5, d.radius * 0.9, d.radius * 0.25, 0, 0, Math.PI*2);
+    ctx.ellipse(d.x + stepWiggle * 0.3, d.y + d.radius * 0.6, d.radius * 1.1, d.radius * 0.3, 0, 0, Math.PI*2);
     ctx.fill();
     ctx.restore();
 
     // Draw dancer
     ctx.save();
     ctx.translate(d.x + stepWiggle * 0.3, d.y - bounceY);
-    ctx.rotate(sway + armTilt);
+    ctx.rotate(sway + armTilt + spinKick);
     ctx.scale(sx * d.scaleX, sy * d.scaleY);
 
     if (IMG[d.type] && IMG[d.type].complete) {
