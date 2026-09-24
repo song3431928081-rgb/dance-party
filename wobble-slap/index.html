@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>WOBBLE SLAP — Tap to Slap!</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Start Screen -->
+  <div id="start-screen" class="screen">
+    <div class="banner-bar">🍮🍩🍡🍫🍪🧁</div>
+    <h1 class="game-title">WOBBLE<br><span class="title-accent">SLAP</span></h1>
+    <p class="tagline">Tap anywhere to SLAP a wobbler!<br>Send em flyin'. Rack up COMBO.</p>
+    <button id="start-btn" class="big-btn">SLAP 'EM!</button>
+    <div class="tip">🖱️ Click · 📱 Tap · 🍮 Gooey Physics</div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="count-box">
+      <span class="count-label">SLAPS</span>
+      <span class="count-val" id="slap-count">0</span>
+    </div>
+    <div class="combo-box hidden" id="combo-box">
+      <span class="combo-label">COMBO</span>
+      <span class="combo-val" id="combo-val">x3</span>
+    </div>
+    <div class="hud-right">
+      <button id="filter-btn" class="icon-btn" title="Magic filter">🌀</button>
+      <button id="spawn-btn" class="icon-btn" title="Spawn more">🍮</button>
+      <button id="mute-btn" class="icon-btn" title="Mute">🔊</button>
+    </div>
+  </div>
+
+  <!-- Floating hint -->
+  <div id="hint" class="hidden">TAP TO SLAP!</div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

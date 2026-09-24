@@ -1,0 +1,123 @@
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100%; height:100%; overflow:hidden;
+  background:#f8f4ef;
+  font-family:'Impact','Arial Black','Helvetica Neue',sans-serif;
+  color:#111; user-select:none; -webkit-user-select:none;
+  touch-action:none;
+}
+
+#app { position:relative; width:100vw; height:100vh; }
+#game-canvas { display:block; width:100%; height:100%; background:#f8f4ef; }
+
+.hidden { display:none !important; }
+
+/* ===== Screens ===== */
+.screen {
+  position:absolute; inset:0; z-index:50;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:#f8f4ef;
+  padding:20px; text-align:center;
+  animation:fadeIn .4s ease;
+}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.banner-bar {
+  width:92%; max-width:520px;
+  font-size:34px; letter-spacing:6px;
+  text-align:center;
+  padding:18px 12px;
+  margin-bottom:20px;
+  border-radius:20px;
+  background: linear-gradient(135deg, #ff6b9d, #ffa07a, #ffd93d, #98fb98, #87ceeb, #dda0dd);
+  background-size:300% 300%;
+  animation: bannerShimmer 4s ease-in-out infinite;
+  box-shadow:0 8px 30px rgba(255,107,157,.3), inset 0 2px 0 rgba(255,255,255,.4);
+}
+@keyframes bannerShimmer {
+  0%,100% { background-position:0% 50%; }
+  50%     { background-position:100% 50%; }
+}
+
+.game-title {
+  font-size:72px; line-height:.95; letter-spacing:2px;
+  color:#111;
+}
+.title-accent { color:#ff4d7c; }
+
+.tagline {
+  margin:14px 0 22px;
+  font-size:17px; color:#555;
+  line-height:1.6; letter-spacing:.5px;
+}
+
+.big-btn {
+  padding:18px 64px; font-size:22px; font-weight:bold;
+  font-family:inherit; letter-spacing:4px; color:#fff;
+  background:#111;
+  border:none; border-radius:50px; cursor:pointer;
+  box-shadow:0 6px 0 #333, 0 10px 20px rgba(0,0,0,.15);
+  transition:transform .08s, box-shadow .08s;
+}
+.big-btn:active { transform:translateY(4px); box-shadow:0 2px 0 #333; }
+
+.tip {
+  margin-top:18px; font-size:14px; color:#888; letter-spacing:2px;
+}
+
+/* ===== HUD ===== */
+#hud {
+  position:absolute; top:0; left:0; right:0; z-index:20;
+  display:flex; justify-content:space-between; align-items:flex-start;
+  padding:16px 20px; pointer-events:none;
+}
+.count-box, .combo-box {
+  pointer-events:none;
+  background:rgba(255,255,255,.85);
+  border:2px solid #111; border-radius:16px;
+  padding:8px 16px;
+  box-shadow:0 4px 0 #111;
+  display:flex; flex-direction:column; align-items:center;
+}
+.combo-box {
+  background:rgba(255,77,124,.95);
+  border-color:#fff;
+  box-shadow:0 4px 0 #991b3d;
+  color:#fff;
+  animation: comboPop .3s ease;
+}
+@keyframes comboPop { from{transform:scale(.5)} to{transform:scale(1)} }
+
+.count-label, .combo-label { font-size:11px; letter-spacing:3px; color:#666; }
+.combo-label { color:#fff; }
+.count-val { font-size:28px; font-weight:bold; color:#111; }
+.combo-val { font-size:28px; font-weight:bold; color:#fff; }
+
+.hud-left { display:flex; gap:10px; pointer-events:none; }
+.hud-right { display:flex; gap:8px; pointer-events:auto; }
+.icon-btn {
+  width:44px; height:44px; font-size:20px;
+  background:rgba(255,255,255,.85); border:2px solid #111; border-radius:50%;
+  cursor:pointer; box-shadow:0 3px 0 #111;
+}
+.icon-btn:active { transform:translateY(2px); box-shadow:0 1px 0 #111; }
+
+/* ===== Floating hint ===== */
+#hint {
+  position:absolute; bottom:40px; left:50%; transform:translateX(-50%);
+  z-index:10; padding:10px 20px;
+  background:rgba(17,17,17,.85); color:#fff;
+  font-size:14px; letter-spacing:2px;
+  border-radius:30px;
+  animation:breathe 2s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes breathe {
+  0%,100% { opacity:.7; transform:translateX(-50%) scale(1); }
+  50% { opacity:1; transform:translateX(-50%) scale(1.05); }
+}
+
+@media (max-width:400px) {
+  .game-title { font-size:56px; }
+}
