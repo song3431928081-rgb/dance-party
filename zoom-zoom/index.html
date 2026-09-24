@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>ZOOM ZOOM — Dodge Forever!</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Start Screen -->
+  <div id="start-screen" class="screen">
+    <div class="banner-bar">🚀💨⚡🎯🔥💥</div>
+    <h1 class="game-title">ZOOM<br><span class="title-accent">ZOOM</span></h1>
+    <p class="tagline">Swipe left / right to dodge!<br>How far can you go without CRASH?</p>
+    <div class="best-line" id="best-on-start">BEST: 0</div>
+    <button id="start-btn" class="big-btn">ZOOM!</button>
+    <div class="tip">👈 Swipe → · 👆 Tap sides · 💀 Don't CRASH</div>
+  </div>
+
+  <!-- Game Over Screen -->
+  <div id="over-screen" class="screen hidden">
+    <h1 class="game-title crash-title">CRASH!<br><span class="title-accent">💥</span></h1>
+    <p class="final-score" id="final-score">SCORE: 0</p>
+    <p class="best-line" id="best-on-over">BEST: 0</p>
+    <button id="restart-btn" class="big-btn">ZOOM AGAIN!</button>
+    <div class="tip">👈 Swipe → · 👆 Tap sides · 💀 Don't CRASH</div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-left">
+      <div class="count-box">
+        <span class="count-label">SCORE</span>
+        <span class="count-val" id="score-val">0</span>
+      </div>
+      <div class="count-box speed-box">
+        <span class="count-label">SPEED</span>
+        <span class="count-val" id="speed-val">1.0</span>
+      </div>
+    </div>
+    <div class="hud-right">
+      <button id="filter-btn" class="icon-btn" title="Magic filter">🌀</button>
+      <button id="mute-btn" class="icon-btn" title="Mute">🔊</button>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
