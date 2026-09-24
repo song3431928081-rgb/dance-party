@@ -1,0 +1,125 @@
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100%; height:100%; overflow:hidden;
+  background:#1a1a2e;
+  font-family:'Impact','Arial Black','Helvetica Neue',sans-serif;
+  color:#fff; user-select:none; -webkit-user-select:none;
+  touch-action:none;
+}
+
+#app { position:relative; width:100vw; height:100vh; }
+#game-canvas { display:block; width:100%; height:100%; background:radial-gradient(circle at 50% 30%, #2a2a4e 0%, #1a1a2e 70%); }
+
+.hidden { display:none !important; }
+
+/* ===== Screens ===== */
+.screen {
+  position:absolute; inset:0; z-index:50;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background: radial-gradient(circle at 50% 30%, #2a2a4e 0%, #1a1a2e 70%);
+  padding:20px; text-align:center;
+  animation:fadeIn .3s ease;
+}
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.banner-bar {
+  width:92%; max-width:520px;
+  font-size:34px; letter-spacing:6px;
+  text-align:center;
+  padding:18px 12px;
+  margin-bottom:20px;
+  border-radius:20px;
+  background: linear-gradient(135deg, #39ff14, #ffea00, #ff5555, #bf00ff, #0080ff);
+  background-size:300% 300%;
+  animation: bannerShimmer 2s ease-in-out infinite;
+  box-shadow:0 0 40px rgba(57,255,20,.5);
+}
+@keyframes bannerShimmer {
+  0%,100% { background-position:0% 50%; }
+  50%     { background-position:100% 50%; }
+}
+
+.game-title {
+  font-size:84px; line-height:.9; letter-spacing:4px;
+  color:#fff;
+  text-shadow:0 0 20px #39ff14, 0 0 40px #bf00ff;
+}
+.title-accent {
+  background: linear-gradient(135deg, #39ff14, #bf00ff, #0080ff);
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+.best-line {
+  font-size:16px; color:#39ff14; letter-spacing:2px;
+  margin:8px 0 20px; text-shadow:0 0 10px rgba(57,255,20,.6);
+}
+.tagline {
+  margin:10px 0;
+  font-size:18px; color:#aaa;
+  line-height:1.6; letter-spacing:.5px;
+}
+
+.big-btn {
+  padding:18px 64px; font-size:24px; font-weight:bold;
+  font-family:inherit; letter-spacing:5px; color:#000;
+  background: linear-gradient(135deg, #39ff14, #0080ff);
+  border:none; border-radius:50px; cursor:pointer;
+  box-shadow:0 0 30px rgba(57,255,20,.5);
+  transition:transform .08s, box-shadow .08s;
+}
+.big-btn:active { transform:translateY(3px) scale(.97); }
+
+.tip { margin-top:18px; font-size:13px; color:#666; letter-spacing:2px; }
+
+/* ===== HUD ===== */
+#hud {
+  position:absolute; top:0; left:0; right:0; z-index:20;
+  display:flex; justify-content:space-between; align-items:flex-start;
+  padding:14px 18px; pointer-events:none;
+}
+.hud-left { display:flex; gap:8px; pointer-events:none; }
+.count-box {
+  pointer-events:none;
+  background:rgba(0,0,0,.6);
+  border:2px solid #39ff14; border-radius:14px;
+  padding:6px 12px;
+  box-shadow:0 0 15px rgba(57,255,20,.4);
+  display:flex; flex-direction:column; align-items:center;
+}
+.green-box { border-color:#ffea00; box-shadow:0 0 15px rgba(255,234,0,.4); }
+.green-box .count-label { color:#ffea00; }
+.count-label { font-size:10px; letter-spacing:3px; color:#888; }
+.count-val { font-size:22px; font-weight:bold; color:#fff; }
+
+.hud-right { display:flex; gap:6px; pointer-events:auto; }
+.icon-btn {
+  width:42px; height:42px; font-size:18px;
+  background:rgba(0,0,0,.6); border:2px solid #39ff14; border-radius:50%;
+  cursor:pointer;
+  box-shadow:0 0 10px rgba(57,255,20,.4);
+}
+.icon-btn:active { transform:translateY(2px); }
+
+/* Milestone popup */
+#milestone {
+  position:absolute; top:35%; left:50%; transform:translate(-50%, -50%) scale(0.5);
+  z-index:30; padding:16px 32px;
+  background: linear-gradient(135deg, #39ff14, #bf00ff);
+  color:#000; font-size:28px; font-weight:bold;
+  letter-spacing:3px; border-radius:30px;
+  box-shadow:0 0 50px rgba(57,255,20,.8);
+  animation: msPop 0.6s ease forwards;
+  pointer-events:none;
+}
+@keyframes msPop {
+  0% { opacity:0; transform:translate(-50%,-50%) scale(0.3); }
+  30% { opacity:1; transform:translate(-50%,-50%) scale(1.1); }
+  70% { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  100% { opacity:0; transform:translate(-50%,-80%) scale(0.9); }
+}
+
+@media (max-width:400px) {
+  .game-title { font-size:64px; }
+}

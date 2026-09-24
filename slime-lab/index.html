@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>SLIME LAB — Ooze Forever!</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Start Screen -->
+  <div id="start-screen" class="screen">
+    <div class="banner-bar">🟢🟡🟠🔴🟣🔵</div>
+    <h1 class="game-title">SLIME<br><span class="title-accent">LAB</span></h1>
+    <p class="tagline">Tap to spawn a slime!<br>They ooze. They breed. They explode.</p>
+    <div class="best-line" id="best-on-start">ALL-TIME BEST: 0</div>
+    <button id="start-btn" class="big-btn">OOZE!</button>
+    <div class="tip">👆 Tap to seed · 🌈 They crossbreed · 💥 OOZEPEDIA</div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-left">
+      <div class="count-box">
+        <span class="count-label">SLIMES</span>
+        <span class="count-val" id="slime-count">0</span>
+      </div>
+      <div class="count-box green-box">
+        <span class="count-label">GENES</span>
+        <span class="count-val" id="gene-count">0</span>
+      </div>
+    </div>
+    <div class="hud-right">
+      <button id="filter-btn" class="icon-btn" title="Magic filter">🌀</button>
+      <button id="pop-btn" class="icon-btn" title="POP ALL">💥</button>
+      <button id="mute-btn" class="icon-btn" title="Mute">🔊</button>
+    </div>
+  </div>
+
+  <!-- Slime count alert -->
+  <div id="milestone" class="hidden"></div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
