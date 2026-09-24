@@ -88,15 +88,24 @@ function playHat(time) {
 }
 
 let nextLoopTime = 0;
+let schedulerTimer = null;
+
 function scheduleMusic() {
   if (!isPlaying) return;
+
+  // 1) 防浏览器自动挂起 AudioContext（切换 tab / 息屏后 iOS/Android 都会 suspend）
+  if (audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
+
   const now = audioCtx.currentTime;
-  // 调度策略：预排 2 秒；如果 scheduler 被延迟了超过 1 个 LOOP（~7.5s），
-  // 直接重置 nextLoopTime 到 now + 0.1s，避免 while 循环疯狂补排
+
+  // 2) drift 保护：如果 scheduler 被阻塞超过 1 LOOP（~7.5s），
+  //    直接重锚到 now + 0.1s，避免疯狂补排几千个音符
   if (nextLoopTime < now - LOOP) {
     nextLoopTime = now + 0.1;
   }
-  while (nextLoopTime < now + 2.0) {
+
+  // 3) 预排 3 秒（比之前多 1s），给调度器 2~3 个 tick 的容错空间
+  while (nextLoopTime < now + 3.0) {
     const ls = nextLoopTime;
     for (const [off, note, dur] of melody) {
       playTone(noteFreq[note], ls + off * BEAT, dur * BEAT * 0.9, 'triangle', 0.12);
@@ -111,18 +120,38 @@ function scheduleMusic() {
     }
     nextLoopTime += LOOP;
   }
-  // 用 rAF 驱动调度器 —— 比固定 200ms setTimeout 更贴近渲染节奏
-  requestAnimationFrame(() => scheduleMusic());
+
+  // 4) 调度器用 setTimeout，固定 500ms 间隔
+  //    原因：rAF 在页面不可见（切 app / 息屏）时完全停止 → 直接死循环断音
+  //    setTimeout 是唯一可靠保活的方案
+  //    间隔 500ms 足够（每次预排 3s，500ms 一次的话永远有 6x 备份）
+  schedulerTimer = setTimeout(scheduleMusic, 500);
 }
 
 function startMusic() {
   initAudio();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
   isPlaying = true;
-  musicStartTime = audioCtx.currentTime; // 修复：之前漏赋值，getBeatProgress 一直 NaN
+  musicStartTime = audioCtx.currentTime;
   nextLoopTime = audioCtx.currentTime + 0.1;
   scheduleMusic();
 }
+
+// ===== 页面可见性 / 前台唤醒保护 =====
+// 用户从后台切回时浏览器可能 suspend AudioContext 或重置时间基
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && isPlaying) {
+    // 立刻恢复音频
+    if (audioCtx && audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
+    // 重置锚点：避免因为后台期间 audioCtx.currentTime 停止推进导致的 drift
+    if (audioCtx) {
+      nextLoopTime = audioCtx.currentTime + 0.1;
+    }
+    // 取消旧定时器，立即再排一次
+    if (schedulerTimer) clearTimeout(schedulerTimer);
+    scheduleMusic();
+  }
+});
 
 function getBeatProgress() {
   if (!audioCtx || !isPlaying) return 0;
