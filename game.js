@@ -570,6 +570,35 @@ function render(time) {
 
     ctx.restore();
   }
+
+  // ===== KALEIDOSCOPE FILTER (canvas post-process) =====
+  if (FILTERS[filterIdx] === 'KALEIDO') {
+    const N = 6; // 6 slices
+    const cx = W / 2, cy = H / 2;
+    const maxR = Math.max(W, H);
+    // Grab current canvas content as temp pattern source
+    const temp = document.createElement('canvas');
+    temp.width = canvas.width; temp.height = canvas.height;
+    const tctx = temp.getContext('2d');
+    tctx.drawImage(canvas, 0, 0);
+    ctx.save();
+    ctx.fillStyle = '#f5f3ef';
+    ctx.fillRect(0, 0, W, H);
+    const sliceAngle = (Math.PI * 2) / N;
+    for (let i = 0; i < N; i++) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(i * sliceAngle + filterAnimPhase * 0.4);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, maxR, -sliceAngle / 2, sliceAngle / 2);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(temp, -cx, -cy);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
 }
 
 // ===== Main Loop =====
@@ -580,6 +609,7 @@ function loop(t) {
   lastTime = t;
   updatePhysics(dt);
   render(t);
+  stepFilter(dt);
   // Update HUD counter
   const el = document.getElementById('dancer-count');
   if (el) el.textContent = dancers.length;
@@ -602,6 +632,32 @@ canvas.addEventListener('pointerdown', e => {
 
 // ===== Flow =====
 let state = 'START';
+
+// ===== MAGIC FILTERS =====
+const FILTERS = ['OFF', 'LSD', 'INVERT', 'GLOW', 'KALEIDO'];
+let filterIdx = 0;
+let filterAnimPhase = 0;
+
+function applyCSSFilter() {
+  const canvasEl = document.getElementById('game-canvas');
+  const f = FILTERS[filterIdx];
+  if (f === 'OFF' || f === 'KALEIDO') {
+    canvasEl.style.filter = 'none'; // kaleido uses canvas post-processing
+  } else if (f === 'LSD') {
+    const h = (filterAnimPhase * 60) % 360;
+    canvasEl.style.filter = `hue-rotate(${h}deg) saturate(2.2) contrast(1.4)`;
+  } else if (f === 'INVERT') {
+    canvasEl.style.filter = 'invert(1) hue-rotate(180deg) saturate(1.5)';
+  } else if (f === 'GLOW') {
+    canvasEl.style.filter = 'brightness(1.3) contrast(1.5) saturate(2) blur(0.5px)';
+  }
+}
+
+// Update filter animation every frame (called from render loop via requestAnimationFrame)
+function stepFilter(dt) {
+  filterAnimPhase += dt * 3; // radians/sec
+  applyCSSFilter();
+}
 
 document.getElementById('start-btn').addEventListener('click', () => {
   state = 'PLAYING';
@@ -629,4 +685,17 @@ document.getElementById('mute-btn').addEventListener('click', () => {
   muted = !muted;
   document.getElementById('mute-btn').textContent = muted ? '🔇' : '🔊';
   if (musicGain) musicGain.gain.value = muted ? 0 : 0.45;
+});
+
+// ===== FILTER BUTTON — cycle through magic filters =====
+const FILTER_LABELS = { OFF: '🌀', LSD: '🌈', INVERT: '🔮', GLOW: '✨', KALEIDO: '🌸' };
+document.getElementById('filter-btn').addEventListener('click', () => {
+  filterIdx = (filterIdx + 1) % FILTERS.length;
+  const f = FILTERS[filterIdx];
+  const btn = document.getElementById('filter-btn');
+  btn.textContent = FILTER_LABELS[f];
+  btn.title = `Filter: ${f}`;
+  // Snap animation phase so filter feels fresh on click
+  filterAnimPhase = 0;
+  applyCSSFilter();
 });
