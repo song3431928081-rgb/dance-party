@@ -8,6 +8,7 @@
 </head>
 <body>
 <div id="app">
+  <canvas id="bg-canvas"></canvas>
   <canvas id="art-canvas"></canvas>
 
   <!-- Brush toolbar (left, vertical) -->
@@ -33,6 +34,7 @@
     <button id="undo-btn" class="tool-btn" title="Undo">↶</button>
     <button id="clear-btn" class="tool-btn warn" title="Clear">🗑️</button>
     <button id="gallery-btn" class="tool-btn" title="Auto background">🎨</button>
+    <button id="music-btn" class="tool-btn music" title="Ambient music">🎵</button>
     <button id="save-btn" class="tool-btn save" title="Save as PNG">💾</button>
   </div>
 
@@ -41,7 +43,7 @@
     <h1 class="brand">MUSEUM<br><span class="accent">STUDIO</span></h1>
     <p class="slogan">Your finger is the brush.<br>The canvas is infinite.<br>Draw. Savor. Save.</p>
     <button id="start-btn" class="big-btn">START PAINTING</button>
-    <div class="hint">Drag to draw · Pick a brush · Save as PNG 💾</div>
+    <div class="hint">Drag to draw · Ambient music · Save as PNG 💾</div>
   </div>
 </div>
 <script src="game.js"></script>

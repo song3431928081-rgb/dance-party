@@ -2,17 +2,98 @@
 // 8 algorithmic brushes that follow YOUR finger.
 
 const canvas = document.getElementById('art-canvas');
+const bgCanvas = document.getElementById('bg-canvas');
 const ctx = canvas.getContext('2d');
+const bgCtx = bgCanvas.getContext('2d');
 let W, H, DPR;
 function resize() {
   DPR = Math.min(window.devicePixelRatio, 2);
   W = window.innerWidth; H = window.innerHeight;
-  canvas.width = W * DPR; canvas.height = H * DPR;
-  canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  for (const c of [canvas, bgCanvas]) {
+    c.width = W * DPR; c.height = H * DPR;
+    c.style.width = W + 'px'; c.style.height = H + 'px';
+    c.getContext('2d').setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
 }
 window.addEventListener('resize', () => { resize(); });
 resize();
+
+// ===== AMBIENT BACKGROUND — floating light orbs =====
+const orbs = [];
+const NUM_ORBS = 14;
+let grainPattern = null;
+function initGrain() {
+  const g = document.createElement('canvas');
+  g.width = 256; g.height = 256;
+  const gx = g.getContext('2d');
+  const img = gx.createImageData(256, 256);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = Math.random() * 255;
+    img.data[i] = img.data[i+1] = img.data[i+2] = v;
+    img.data[i+3] = 10;
+  }
+  gx.putImageData(img, 0, 0);
+  grainPattern = bgCtx.createPattern(g, 'repeat');
+}
+function initOrbs() {
+  orbs.length = 0;
+  const pal = PALETTES[paletteIdx].colors;
+  for (let i = 0; i < NUM_ORBS; i++) {
+    orbs.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: 60 + Math.random() * 220,
+      vx: (Math.random() - 0.5) * 12,
+      vy: (Math.random() - 0.5) * 12,
+      color: pal[Math.floor(Math.random() * pal.length)],
+      phase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+function drawBg(t) {
+  bgCtx.fillStyle = '#0d0d10';
+  bgCtx.fillRect(0, 0, W, H);
+  // Base gradient
+  const pal = PALETTES[paletteIdx].colors;
+  const grd = bgCtx.createRadialGradient(W*0.5, H*0.4, 0, W*0.5, H*0.5, Math.max(W,H));
+  grd.addColorStop(0, pal[2] + '12');
+  grd.addColorStop(1, '#0d0d10');
+  bgCtx.fillStyle = grd;
+  bgCtx.fillRect(0, 0, W, H);
+  // Floating orbs
+  for (const o of orbs) {
+    o.x += o.vx * 0.016;
+    o.y += o.vy * 0.016;
+    if (o.x < -o.r) o.x = W + o.r;
+    if (o.x > W + o.r) o.x = -o.r;
+    if (o.y < -o.r) o.y = H + o.r;
+    if (o.y > H + o.r) o.y = -o.r;
+    const pulse = 0.8 + Math.sin(t * 0.0006 + o.phase) * 0.2;
+    const r = o.r * pulse;
+    const g = bgCtx.createRadialGradient(o.x, o.y, 0, o.x, o.y, r);
+    g.addColorStop(0, o.color + '28');
+    g.addColorStop(0.5, o.color + '10');
+    g.addColorStop(1, o.color + '00');
+    bgCtx.fillStyle = g;
+    bgCtx.beginPath();
+    bgCtx.arc(o.x, o.y, r, 0, Math.PI * 2);
+    bgCtx.fill();
+  }
+  // Grain overlay (cheap pattern)
+  if (grainPattern) {
+    bgCtx.save();
+    bgCtx.globalAlpha = 0.5;
+    bgCtx.fillStyle = grainPattern;
+    bgCtx.fillRect(0, 0, W, H);
+    bgCtx.restore();
+  }
+}
+let bgStarted = false;
+function bgLoop(t) {
+  if (!bgStarted) return;
+  drawBg(t);
+  requestAnimationFrame(bgLoop);
+}
 
 // ===== PALETTES =====
 const PALETTES = [
@@ -26,6 +107,145 @@ const PALETTES = [
   { name:'Earth',   colors:['#c0392b','#8e44ad','#d35400','#2c3e50','#f39c12'] },
 ];
 let paletteIdx = 0;
+
+// ===== AMBIENT MUSIC — pre-rendered lo-fi pad =====
+let audioCtx = null, musicNode = null, musicGain = null;
+let musicOn = true;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  musicGain = audioCtx.createGain();
+  musicGain.gain.value = musicOn ? 0.18 : 0;
+  musicGain.connect(audioCtx.destination);
+}
+
+// Render a 20s ambient loop: detuned sine pads + slow filter sweep + soft arp
+async function renderMusic() {
+  const dur = 24;
+  const sampleRate = audioCtx.sampleRate;
+  const off = new OfflineAudioContext(2, sampleRate * dur, sampleRate);
+  const out = off.createGain();
+  out.gain.value = 0.9;
+  out.connect(off.destination);
+
+  // Low-pass filter that slowly sweeps
+  const lp = off.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.value = 1200;
+  lp.Q.value = 0.8;
+  const lpLfo = off.createOscillator();
+  lpLfo.frequency.value = 0.08;
+  const lpLfoGain = off.createGain();
+  lpLfoGain.gain.value = 700;
+  lpLfo.connect(lpLfoGain);
+  lpLfoGain.connect(lp.frequency);
+  lp.connect(out);
+  lpLfo.start();
+
+  // Pad — 5 detuned sine waves in a rich chord (D minor 9)
+  const chord = [73.42, 110, 164.81, 220, 293.66]; // D2, A2, E3, A3, D4
+  chord.forEach((freq, i) => {
+    const osc = off.createOscillator();
+    osc.type = i === 0 ? 'sine' : (i % 2 ? 'triangle' : 'sine');
+    osc.frequency.value = freq * (1 + (i - 2) * 0.003);
+    const g = off.createGain();
+    g.gain.value = 0;
+    g.gain.setValueAtTime(0, 0);
+    g.gain.linearRampToValueAtTime(0.12 / chord.length, 2 + i * 0.4);
+    g.gain.linearRampToValueAtTime(0.08 / chord.length, dur);
+    // Slow tremolo
+    const trem = off.createOscillator();
+    trem.frequency.value = 0.15 + i * 0.04;
+    const tremG = off.createGain();
+    tremG.gain.value = 0.05 / chord.length;
+    trem.connect(tremG);
+    tremG.connect(g.gain);
+    osc.connect(g);
+    g.connect(lp);
+    osc.start(0);
+    trem.start(0);
+    osc.stop(dur);
+    trem.stop(dur);
+  });
+
+  // Soft arpeggio every 2s
+  const arpNotes = [220, 277.18, 329.63, 440, 554.37]; // A3, C#4, E4, A4, C#5
+  for (let step = 0; step < dur / 2; step++) {
+    const t = step * 2 + 0.5;
+    const note = arpNotes[step % arpNotes.length];
+    const o = off.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = note;
+    const g = off.createGain();
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.04, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 1.8);
+    o.connect(g);
+    g.connect(lp);
+    o.start(t);
+    o.stop(t + 2);
+  }
+
+  // Sub bass
+  const sub = off.createOscillator();
+  sub.type = 'sine';
+  sub.frequency.value = 36.71; // D1
+  const subG = off.createGain();
+  subG.gain.setValueAtTime(0, 0);
+  subG.gain.linearRampToValueAtTime(0.15, 3);
+  subG.gain.linearRampToValueAtTime(0.1, dur);
+  sub.connect(subG);
+  subG.connect(out);
+  sub.start(0);
+  sub.stop(dur);
+
+  // Very soft pink-ish noise bed (filtered)
+  const noiseLen = sampleRate * dur;
+  const noiseBuf = off.createBuffer(1, noiseLen, sampleRate);
+  const nd = noiseBuf.getChannelData(0);
+  for (let i = 0; i < noiseLen; i++) nd[i] = (Math.random() * 2 - 1) * 0.15;
+  const noise = off.createBufferSource();
+  noise.buffer = noiseBuf;
+  const nf = off.createBiquadFilter();
+  nf.type = 'bandpass';
+  nf.frequency.value = 400;
+  nf.Q.value = 0.5;
+  const ng = off.createGain();
+  ng.gain.value = 0.03;
+  noise.connect(nf); nf.connect(ng); ng.connect(out);
+  noise.start(0);
+  noise.stop(dur);
+
+  const buffer = await off.startRendering();
+  musicNode = audioCtx.createBufferSource();
+  musicNode.buffer = buffer;
+  musicNode.loop = true;
+  musicNode.connect(musicGain);
+  musicNode.start();
+}
+
+async function startMusic() {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state !== 'running') await audioCtx.resume().catch(()=>{});
+  if (!musicNode) {
+    try { await renderMusic(); }
+    catch (e) { console.warn('music render failed', e); }
+  }
+  if (musicNode) musicNode.start();
+}
+function stopMusic() {
+  if (musicNode) { try { musicNode.stop(); } catch(e){} musicNode = null; }
+}
+function toggleMusic() {
+  musicOn = !musicOn;
+  const btn = document.getElementById('music-btn');
+  btn.classList.toggle('off', !musicOn);
+  btn.textContent = musicOn ? '🎵' : '🔇';
+  if (musicGain) musicGain.gain.value = musicOn ? 0.18 : 0;
+  if (musicOn && audioCtx && !musicNode) startMusic();
+}
+document.getElementById('music-btn').addEventListener('click', toggleMusic);
 
 // ===== BRUSHES =====
 const BRUSHES = [
@@ -79,6 +299,7 @@ PALETTES.forEach((p, i) => {
     paletteIdx = i;
     colorList.querySelectorAll('.palette-btn').forEach(c => c.classList.remove('active'));
     btn.classList.add('active');
+    if (bgStarted) initOrbs(); // update ambient bg colors
   });
   colorList.appendChild(btn);
 });
@@ -377,8 +598,7 @@ function drawCalligraphy(x, y, dx, dy, speed) {
 // ===== CLEAR =====
 function clearCanvas() {
   snapshot();
-  ctx.fillStyle = '#121214';
-  ctx.fillRect(0, 0, W, H);
+  ctx.clearRect(0, 0, W, H);
   webPoints = [];
 }
 document.getElementById('clear-btn').addEventListener('click', clearCanvas);
@@ -388,9 +608,15 @@ document.getElementById('undo-btn').addEventListener('click', undo);
 
 // ===== SAVE PNG =====
 document.getElementById('save-btn').addEventListener('click', () => {
+  // Composite background + art into one PNG
+  const tmp = document.createElement('canvas');
+  tmp.width = canvas.width; tmp.height = canvas.height;
+  const tctx = tmp.getContext('2d');
+  tctx.drawImage(bgCanvas, 0, 0);
+  tctx.drawImage(canvas, 0, 0);
   const link = document.createElement('a');
   link.download = `museum-studio-${Date.now()}.png`;
-  link.href = canvas.toDataURL('image/png');
+  link.href = tmp.toDataURL('image/png');
   link.click();
   showToast('Saved! 💾');
 });
@@ -428,7 +654,15 @@ function showToast(msg) {
 // ===== START =====
 document.getElementById('start-btn').addEventListener('click', () => {
   document.getElementById('start-overlay').classList.add('hidden');
+  // Init ambient background
+  if (!grainPattern) initGrain();
+  initOrbs();
+  bgStarted = true;
+  requestAnimationFrame(bgLoop);
   clearCanvas();
+  // Start ambient music
+  initAudio();
+  startMusic();
 });
 
 // ===== KEYBOARD =====
@@ -436,6 +670,7 @@ document.addEventListener('keydown', e => {
   if (e.key === 'z' || e.key === 'Z') undo();
   else if (e.key === 's' || e.key === 'S') document.getElementById('save-btn').click();
   else if (e.key === 'c' || e.key === 'C') clearCanvas();
+  else if (e.key === 'm' || e.key === 'M') toggleMusic();
   else if (e.key >= '1' && e.key <= '8') {
     brushIdx = parseInt(e.key) - 1;
     brushList.querySelectorAll('.brush-btn').forEach((b,i) => b.classList.toggle('active', i === brushIdx));
