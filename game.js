@@ -25,6 +25,7 @@ resize();
 // ===== Audio Engine =====
 let audioCtx = null, musicGain = null, isPlaying = false, muted = false;
 let musicStartTime = 0;
+let hatBuffer = null; // 一次性生成，复用避免 GC 抖动
 const BPM = 128;
 const BEAT = 60 / BPM;
 const BAR = BEAT * 4;
@@ -49,6 +50,11 @@ function initAudio() {
   musicGain = audioCtx.createGain();
   musicGain.gain.value = muted ? 0 : 0.45;
   musicGain.connect(audioCtx.destination);
+  // Pre-generate hi-hat noise buffer ONCE — reuse forever
+  const len = audioCtx.sampleRate * 0.06;
+  hatBuffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+  const d = hatBuffer.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
 }
 
 function playTone(freq, time, dur, type, vol) {
@@ -73,13 +79,10 @@ function playKick(time) {
   osc.start(time); osc.stop(time + 0.2);
 }
 function playHat(time) {
-  const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 0.04, audioCtx.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
-  const src = audioCtx.createBufferSource(); src.buffer = buf;
+  const src = audioCtx.createBufferSource(); src.buffer = hatBuffer;
   const g = audioCtx.createGain();
   g.gain.setValueAtTime(0.1, time);
-  g.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+  g.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
   src.connect(g); g.connect(musicGain);
   src.start(time);
 }
@@ -88,7 +91,12 @@ let nextLoopTime = 0;
 function scheduleMusic() {
   if (!isPlaying) return;
   const now = audioCtx.currentTime;
-  while (nextLoopTime < now + 1.5) {
+  // 调度策略：预排 2 秒；如果 scheduler 被延迟了超过 1 个 LOOP（~7.5s），
+  // 直接重置 nextLoopTime 到 now + 0.1s，避免 while 循环疯狂补排
+  if (nextLoopTime < now - LOOP) {
+    nextLoopTime = now + 0.1;
+  }
+  while (nextLoopTime < now + 2.0) {
     const ls = nextLoopTime;
     for (const [off, note, dur] of melody) {
       playTone(noteFreq[note], ls + off * BEAT, dur * BEAT * 0.9, 'triangle', 0.12);
@@ -103,13 +111,15 @@ function scheduleMusic() {
     }
     nextLoopTime += LOOP;
   }
-  setTimeout(scheduleMusic, 200);
+  // 用 rAF 驱动调度器 —— 比固定 200ms setTimeout 更贴近渲染节奏
+  requestAnimationFrame(() => scheduleMusic());
 }
 
 function startMusic() {
   initAudio();
   if (audioCtx.state === 'suspended') audioCtx.resume();
   isPlaying = true;
+  musicStartTime = audioCtx.currentTime; // 修复：之前漏赋值，getBeatProgress 一直 NaN
   nextLoopTime = audioCtx.currentTime + 0.1;
   scheduleMusic();
 }
