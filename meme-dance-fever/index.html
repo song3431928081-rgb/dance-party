@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>ABSTRACT SHAKER — Meme Dance Fever</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Start Screen -->
+  <div id="start-screen" class="screen">
+    <div class="banner-bar">🐸🍆📺🚽🟡💥</div>
+    <h1 class="game-title">ABSTRACT<br><span class="title-accent">SHAKER</span></h1>
+    <p class="tagline">Meme Dance Fever<br>Hit the beat. Mutate. Share the chaos.</p>
+    <button id="start-btn" class="big-btn">LET'S SHAKE!</button>
+    <div class="tip">👆 Tap / Swipe / Hold · ⌨️ WASD · 🎵 My limbs have their own ideas.</div>
+  </div>
+
+  <!-- Game HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="stat-box">
+        <span class="stat-label">SCORE</span>
+        <span class="stat-val" id="score-val">0</span>
+      </div>
+      <div class="stat-box combo-box">
+        <span class="stat-label">COMBO</span>
+        <span class="stat-val" id="combo-val">0</span>
+      </div>
+      <div class="stat-box chaos-box">
+        <span class="stat-label">CHAOS</span>
+        <span class="stat-val" id="chaos-val">0%</span>
+      </div>
+    </div>
+    <div class="judgement" id="judgement"></div>
+    <div class="boss-tag hidden" id="boss-tag">BOSS: ABSTRACT DANCE KING</div>
+  </div>
+
+  <!-- Combo fly popups container -->
+  <div id="popups"></div>
+
+  <!-- Game Over Screen -->
+  <div id="over-screen" class="screen hidden">
+    <h1 class="game-title over-title">DANCE<br><span class="title-accent">OVER</span></h1>
+    <div class="final-stats">
+      <div class="final-row"><span>FINAL SCORE</span><b id="final-score">0</b></div>
+      <div class="final-row"><span>MAX COMBO</span><b id="final-combo">0</b></div>
+      <div class="final-row"><span>CHAOS RANK</span><b id="final-rank">D</b></div>
+    </div>
+    <div class="challenge-box">
+      <div class="challenge-label">YOUR CHALLENGE CODE</div>
+      <div class="challenge-code" id="challenge-code">ABC123</div>
+      <div class="challenge-hint">Share it — your friend dances the SAME moves!</div>
+    </div>
+    <div class="leaderboard">
+      <div class="lb-title">GLOBAL ABSTRACT RANKING</div>
+      <div id="lb-list"></div>
+    </div>
+    <div class="btn-row">
+      <button id="replay-btn" class="mid-btn">🔁 REPLAY MOMENTS</button>
+      <button id="share-btn" class="mid-btn share">📲 SHARE</button>
+    </div>
+    <button id="restart-btn" class="big-btn">SHAKE AGAIN</button>
+  </div>
+
+  <!-- Replay overlay -->
+  <div id="replay-overlay" class="screen hidden">
+    <h2 class="replay-title">🔁 15s GHOST DANCE REPLAY</h2>
+    <canvas id="replay-canvas"></canvas>
+    <div class="replay-sub">Auto-captured meme moments · ready for TikTok</div>
+    <button id="close-replay" class="big-btn">BACK</button>
+  </div>
+
+  <!-- Share toast -->
+  <div id="share-toast" class="hidden">
+    <div class="toast-card">
+      <div class="toast-title">SHARE THE CHAOS</div>
+      <div class="toast-platforms">
+        <span>🎵 TikTok</span>
+        <span>📺 Bilibili</span>
+        <span>🌐 Weibo</span>
+        <span>💬 Clipboard</span>
+      </div>
+      <div class="toast-code" id="share-code"></div>
+      <button class="toast-close" id="toast-close">CLOSE</button>
+    </div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>

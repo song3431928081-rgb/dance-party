@@ -1,0 +1,208 @@
+/* ===== ABSTRACT SHAKER — Meme Dance Fever ===== */
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100%; height:100%; overflow:hidden;
+  background:#0a0014;
+  font-family:'Impact','Arial Black','Helvetica Neue',sans-serif;
+  color:#fff; user-select:none; -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+  touch-action:none;
+}
+
+#app { position:relative; width:100vw; height:100vh; }
+#game-canvas { display:block; width:100%; height:100%; }
+
+.hidden { display:none !important; }
+
+/* ===== Screens ===== */
+.screen {
+  position:absolute; inset:0; z-index:50;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(10,0,20,0.92);
+  padding:20px; text-align:center;
+  overflow-y:auto;
+}
+
+.banner-bar {
+  font-size:32px; letter-spacing:8px; text-align:center;
+  padding:14px 12px; margin-bottom:16px; border-radius:18px;
+  background: linear-gradient(135deg, #39ff14, #ff2d95, #a28bff, #ffd93d, #39ff14);
+  background-size:300% 300%;
+  animation: shimmer 1.8s ease-in-out infinite;
+  box-shadow:0 0 40px rgba(255,45,149,.6);
+}
+@keyframes shimmer { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+
+.game-title {
+  font-size:60px; line-height:.9; letter-spacing:3px;
+  color:#fff; text-shadow:0 0 20px #ff2d95, 0 0 40px #39ff14;
+}
+.title-accent {
+  background: linear-gradient(135deg, #39ff14, #ff2d95, #ffd93d);
+  -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.over-title { animation: shake 0.4s ease infinite; text-shadow:0 0 30px #ff0040, 0 0 60px #ff2d95; }
+@keyframes shake {
+  0%,100% { transform:translate(0,0); }
+  25% { transform:translate(-5px,3px) rotate(-1deg); }
+  50% { transform:translate(5px,-3px) rotate(1deg); }
+  75% { transform:translate(-3px,-3px) rotate(-0.5deg); }
+}
+
+.tagline {
+  margin:14px 0 10px; font-size:16px; color:#aaa;
+  line-height:1.6; letter-spacing:.5px;
+}
+.big-btn {
+  margin-top:20px; padding:16px 56px; font-size:22px; font-weight:bold;
+  font-family:inherit; letter-spacing:4px; color:#000;
+  background: linear-gradient(135deg, #39ff14, #ffd93d);
+  border:none; border-radius:50px; cursor:pointer;
+  box-shadow:0 0 30px rgba(57,255,20,.6);
+  transition:transform .08s;
+}
+.big-btn:active { transform:translateY(3px) scale(.96); }
+.tip { margin-top:16px; font-size:12px; color:#666; letter-spacing:1px; }
+
+/* ===== HUD ===== */
+#hud {
+  position:absolute; top:0; left:0; right:0; z-index:20;
+  padding:14px 16px; pointer-events:none;
+}
+.hud-top { display:flex; justify-content:space-between; gap:8px; }
+.stat-box {
+  background:rgba(0,0,0,.6); border:2px solid #39ff14; border-radius:12px;
+  padding:5px 10px; flex:1; text-align:center;
+  box-shadow:0 0 12px rgba(57,255,20,.4);
+}
+.combo-box { border-color:#ffd93d; box-shadow:0 0 12px rgba(255,217,61,.4); }
+.chaos-box { border-color:#ff2d95; box-shadow:0 0 12px rgba(255,45,149,.5); }
+.stat-label { display:block; font-size:9px; letter-spacing:2px; color:#888; }
+.combo-box .stat-label { color:#ffd93d; }
+.chaos-box .stat-label { color:#ff2d95; }
+.stat-val { font-size:20px; font-weight:bold; }
+
+.judgement {
+  position:absolute; top:38%; left:50%; transform:translateX(-50%);
+  font-size:36px; font-weight:bold; letter-spacing:3px;
+  text-shadow:0 0 20px currentColor;
+  opacity:0; pointer-events:none;
+}
+.judgement.show { animation: judgePop 0.5s ease forwards; }
+@keyframes judgePop {
+  0% { opacity:0; transform:translateX(-50%) scale(0.3); }
+  30% { opacity:1; transform:translateX(-50%) scale(1.2); }
+  100% { opacity:0; transform:translateX(-50%) scale(1) translateY(-30px); }
+}
+
+.boss-tag {
+  position:absolute; top:70px; left:50%; transform:translateX(-50%);
+  padding:6px 16px; background:rgba(255,0,64,.85);
+  border:2px solid #fff; border-radius:20px;
+  font-size:12px; letter-spacing:2px;
+  animation: pulse 0.5s ease infinite;
+}
+@keyframes pulse { 0%,100%{transform:translateX(-50%) scale(1)} 50%{transform:translateX(-50%) scale(1.08)} }
+
+/* ===== Combo popups ===== */
+#popups { position:absolute; inset:0; z-index:25; pointer-events:none; overflow:hidden; }
+.popup {
+  position:absolute; font-weight:bold; font-size:28px;
+  text-shadow:0 0 15px currentColor;
+  animation: popFly 0.9s ease forwards;
+  letter-spacing:2px;
+}
+@keyframes popFly {
+  0% { opacity:0; transform:scale(0.3) rotate(-10deg); }
+  20% { opacity:1; transform:scale(1.2) rotate(5deg); }
+  100% { opacity:0; transform:scale(0.9) rotate(-8deg) translateY(-80px); }
+}
+
+/* ===== Game over ===== */
+.final-stats { margin:16px 0; width:100%; max-width:340px; }
+.final-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 16px; margin:6px 0;
+  background:rgba(255,255,255,.06); border-radius:10px;
+  font-size:14px; letter-spacing:1px;
+}
+.final-row b { font-size:22px; color:#ffd93d; }
+
+.challenge-box {
+  margin:14px 0; padding:14px;
+  background:rgba(255,45,149,.12); border:2px solid #ff2d95;
+  border-radius:14px; width:100%; max-width:340px;
+}
+.challenge-label { font-size:10px; letter-spacing:3px; color:#ff2d95; }
+.challenge-code {
+  font-size:28px; font-weight:bold; letter-spacing:6px;
+  color:#39ff14; text-shadow:0 0 15px #39ff14;
+  margin:6px 0; font-family:monospace;
+}
+.challenge-hint { font-size:11px; color:#888; letter-spacing:.5px; }
+
+.leaderboard {
+  margin:12px 0; width:100%; max-width:340px;
+  background:rgba(0,0,0,.4); border-radius:12px; padding:10px;
+}
+.lb-title { font-size:10px; letter-spacing:2px; color:#888; margin-bottom:6px; }
+.lb-row {
+  display:flex; justify-content:space-between;
+  padding:4px 8px; font-size:12px; color:#aaa;
+}
+.lb-row.me { color:#39ff14; font-weight:bold; }
+.lb-row .rank { width:24px; }
+
+.btn-row { display:flex; gap:10px; margin-top:10px; }
+.mid-btn {
+  padding:12px 20px; font-size:13px; font-family:inherit; letter-spacing:1px;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.2);
+  border-radius:12px; color:#fff; cursor:pointer;
+}
+.mid-btn.share { background:rgba(57,255,20,.15); border-color:#39ff14; color:#39ff14; }
+
+/* ===== Replay ===== */
+.replay-title { font-size:22px; margin-bottom:12px; letter-spacing:2px; }
+#replay-canvas {
+  width:90%; max-width:360px; aspect-ratio:9/16;
+  border:2px solid #ff2d95; border-radius:12px;
+  box-shadow:0 0 30px rgba(255,45,149,.5);
+  background:#000;
+}
+.replay-sub { margin:10px 0; font-size:12px; color:#888; }
+
+/* ===== Share toast ===== */
+#share-toast {
+  position:absolute; inset:0; z-index:60;
+  background:rgba(0,0,0,.75);
+  display:flex; align-items:center; justify-content:center;
+}
+.toast-card {
+  background:#1a0a2e; border:2px solid #ffd93d; border-radius:16px;
+  padding:24px; text-align:center; max-width:320px;
+  box-shadow:0 0 40px rgba(255,217,61,.4);
+}
+.toast-title { font-size:18px; letter-spacing:2px; color:#ffd93d; margin-bottom:12px; }
+.toast-platforms {
+  display:flex; flex-wrap:wrap; gap:8px; justify-content:center;
+  margin-bottom:14px;
+}
+.toast-platforms span {
+  padding:8px 12px; background:rgba(255,255,255,.06);
+  border-radius:10px; font-size:13px;
+}
+.toast-code {
+  font-family:monospace; font-size:22px; color:#39ff14;
+  letter-spacing:4px; padding:10px; background:#000;
+  border-radius:8px; margin-bottom:12px;
+}
+.toast-close {
+  padding:8px 24px; background:#ff2d95; border:none;
+  border-radius:20px; color:#fff; font-weight:bold; cursor:pointer;
+}
+
+@media (max-width:420px) {
+  .game-title { font-size:48px; }
+  .challenge-code { font-size:22px; }
+}
