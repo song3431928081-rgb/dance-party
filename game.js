@@ -1,4 +1,4 @@
-// ===== DANCE PARTY — Tap to Spawn Dancers! =====
+// ===== DANCE PARTY — v76 OfflineAudioContext =====
 // Infinite spawn meme dancer game. No goals. Just vibes.
 
 const canvas = document.getElementById('game-canvas');
@@ -129,16 +129,85 @@ function startMusic() {
   initAudio();
   if (audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
   isPlaying = true;
+  console.log('[DanceParty v76] startMusic() — rendering loop via OfflineAudioContext');
   renderLoop().then(buffer => {
     if (!isPlaying) return;
-    // 创建 AudioBufferSourceNode — 浏览器原生循环，100% 连续
     musicSource = audioCtx.createBufferSource();
     musicSource.buffer = buffer;
     musicSource.loop = true;
     musicSource.connect(musicGain);
     musicSource.start();
     musicStartTime = audioCtx.currentTime;
+    console.log('[DanceParty v76] ✅ loop started — continuous native playback');
+  }).catch(err => {
+    // OfflineAudioContext 失败（极罕见）—— fallback 到旧的手动调度
+    console.error('[DanceParty] OfflineAudioContext failed, fallback to scheduler:', err);
+    fallbackScheduler();
   });
+}
+
+// ===== Fallback: 手动调度（仅当 OfflineAudioContext 失败时启用）=====
+let fallbackTimer = null;
+function fallbackSchedule() {
+  if (!isPlaying) return;
+  const now = audioCtx.currentTime;
+  while (fallbackNext < now + 3.0) {
+    const ls = fallbackNext;
+    for (const [off, note, dur] of melody) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'triangle'; o.frequency.value = noteFreq[note];
+      const t = ls + off * BEAT;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.12, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur * BEAT * 0.9);
+      o.connect(g); g.connect(musicGain);
+      o.start(t); o.stop(t + dur * BEAT * 0.9 + 0.05);
+    }
+    for (const [off, note, dur] of bass) {
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sawtooth'; o.frequency.value = noteFreq[note];
+      const t = ls + off * BEAT;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.18, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur * BEAT * 0.8);
+      o.connect(g); g.connect(musicGain);
+      o.start(t); o.stop(t + dur * BEAT * 0.8 + 0.05);
+    }
+    for (let b = 0; b < 4; b++) {
+      const bt = ls + b * BEAT;
+      // kick
+      const k = audioCtx.createOscillator();
+      const kg = audioCtx.createGain();
+      k.frequency.setValueAtTime(120, bt);
+      k.frequency.exponentialRampToValueAtTime(40, bt + 0.12);
+      kg.gain.setValueAtTime(0.5, bt);
+      kg.gain.exponentialRampToValueAtTime(0.001, bt + 0.18);
+      k.connect(kg); kg.connect(musicGain);
+      k.start(bt); k.stop(bt + 0.22);
+      // hat — 复用小 buffer
+      const hatLen = Math.ceil(audioCtx.sampleRate * 0.06);
+      const hatB = audioCtx.createBuffer(1, hatLen, audioCtx.sampleRate);
+      const hd = hatB.getChannelData(0);
+      for (let i = 0; i < hatLen; i++) hd[i] = Math.random() * 2 - 1;
+      const hat = audioCtx.createBufferSource();
+      const hg = audioCtx.createGain();
+      hat.buffer = hatB;
+      const ht = bt + BEAT * 0.5;
+      hg.gain.setValueAtTime(0.1, ht);
+      hg.gain.exponentialRampToValueAtTime(0.001, ht + 0.05);
+      hat.connect(hg); hg.connect(musicGain);
+      hat.start(ht);
+    }
+    fallbackNext += LOOP;
+  }
+  fallbackTimer = setTimeout(fallbackSchedule, 500);
+}
+let fallbackNext = 0;
+function fallbackScheduler() {
+  fallbackNext = audioCtx.currentTime + 0.1;
+  fallbackSchedule();
 }
 
 // ===== 页面隐藏后恢复（唯一需要的保护）=====
