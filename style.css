@@ -23,10 +23,21 @@ html, body {
 }
 @keyframes fadeIn { from{opacity:0} to{opacity:1} }
 
-.banner {
-  width:92%; max-width:520px; border-radius:20px;
+.banner-bar {
+  width:92%; max-width:520px;
+  font-size:34px; letter-spacing:6px;
+  text-align:center;
+  padding:18px 12px;
   margin-bottom:20px;
-  box-shadow:0 8px 30px rgba(0,0,0,.12);
+  border-radius:20px;
+  background: linear-gradient(135deg, #ff2d95, #ff9a3c, #ffd93d, #6bcb77, #4d96ff, #9b5de5);
+  background-size:300% 300%;
+  animation: bannerShimmer 4s ease-in-out infinite;
+  box-shadow:0 8px 30px rgba(255,45,149,.35), inset 0 2px 0 rgba(255,255,255,.4);
+}
+@keyframes bannerShimmer {
+  0%,100% { background-position:0% 50%; }
+  50%     { background-position:100% 50%; }
 }
 .game-title {
   font-size:72px; line-height:.95; letter-spacing:2px;
