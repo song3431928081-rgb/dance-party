@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>DANCE PARTY — Tap to Spawn Dancers!</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="game-canvas"></canvas>
+
+  <!-- Start Screen -->
+  <div id="start-screen" class="screen">
+    <img src="assets/banner.jpg" class="banner" alt="banner">
+    <h1 class="game-title">DANCE<br><span class="title-accent">PARTY</span></h1>
+    <p class="tagline">Tap anywhere to spawn a dancer!<br>Keep tapping. More dancers. More chaos.</p>
+    <button id="start-btn" class="big-btn">LET'S GO!</button>
+    <div class="tip">🖱️ Click · 📱 Tap · 🎉 Chaotic Vibes</div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="count-box">
+      <span class="count-label">DANCERS</span>
+      <span class="count-val" id="dancer-count">1</span>
+    </div>
+    <div class="hud-right">
+      <button id="clear-btn" class="icon-btn" title="Clear all">🗑️</button>
+      <button id="mute-btn" class="icon-btn" title="Mute">🔊</button>
+    </div>
+  </div>
+
+  <!-- Floating hint -->
+  <div id="hint" class="hidden">TAP TO SPAWN MORE DANCERS</div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
