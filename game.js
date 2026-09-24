@@ -22,14 +22,16 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// ===== Audio Engine =====
-let audioCtx = null, musicGain = null, isPlaying = false, muted = false;
+// ===== Audio Engine — 预渲染原生循环方案 =====
+// 核心思路：把整首 disco loop 一次性渲染进 AudioBuffer，
+// 用 AudioBufferSourceNode.loop = true 让浏览器原生循环。
+// 好处：100% 连续、不受页面可见性影响、零 GC 抖动、无调度器。
+let audioCtx = null, musicGain = null, musicSource = null, isPlaying = false, muted = false;
 let musicStartTime = 0;
-let hatBuffer = null; // 一次性生成，复用避免 GC 抖动
 const BPM = 128;
 const BEAT = 60 / BPM;
 const BAR = BEAT * 4;
-const LOOP = BAR * 4;
+const LOOP = BAR * 4; // 7.5s — 整首 disco loop 一次渲染完成
 
 // Super catchy lo-fi disco loop
 const melody = [
@@ -50,106 +52,101 @@ function initAudio() {
   musicGain = audioCtx.createGain();
   musicGain.gain.value = muted ? 0 : 0.45;
   musicGain.connect(audioCtx.destination);
-  // Pre-generate hi-hat noise buffer ONCE — reuse forever
-  const len = audioCtx.sampleRate * 0.06;
-  hatBuffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
-  const d = hatBuffer.getChannelData(0);
-  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
 }
 
-function playTone(freq, time, dur, type, vol) {
-  const osc = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  osc.type = type; osc.frequency.value = freq;
-  g.gain.setValueAtTime(0, time);
-  g.gain.linearRampToValueAtTime(vol, time + 0.01);
-  g.gain.exponentialRampToValueAtTime(0.001, time + dur);
-  osc.connect(g); g.connect(musicGain);
-  osc.start(time); osc.stop(time + dur);
-}
+// ===== 预渲染整首 disco 到 AudioBuffer =====
+function renderLoop() {
+  const sampleRate = audioCtx.sampleRate;
+  const totalSamples = Math.ceil(LOOP * sampleRate);
+  // OfflineAudioContext 是 Web Audio API 标准，iOS 14.1+ / Android 全支持
+  const offline = new OfflineAudioContext(2, totalSamples, sampleRate);
 
-function playKick(time) {
-  const osc = audioCtx.createOscillator();
-  const g = audioCtx.createGain();
-  osc.frequency.setValueAtTime(120, time);
-  osc.frequency.exponentialRampToValueAtTime(40, time + 0.12);
-  g.gain.setValueAtTime(0.5, time);
-  g.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
-  osc.connect(g); g.connect(musicGain);
-  osc.start(time); osc.stop(time + 0.2);
-}
-function playHat(time) {
-  const src = audioCtx.createBufferSource(); src.buffer = hatBuffer;
-  const g = audioCtx.createGain();
-  g.gain.setValueAtTime(0.1, time);
-  g.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
-  src.connect(g); g.connect(musicGain);
-  src.start(time);
-}
+  // 创建一个主增益节点，所有乐器都汇聚到它
+  const master = offline.createGain();
+  master.gain.value = 1;
+  master.connect(offline.destination);
 
-let nextLoopTime = 0;
-let schedulerTimer = null;
-
-function scheduleMusic() {
-  if (!isPlaying) return;
-
-  // 1) 防浏览器自动挂起 AudioContext（切换 tab / 息屏后 iOS/Android 都会 suspend）
-  if (audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
-
-  const now = audioCtx.currentTime;
-
-  // 2) drift 保护：如果 scheduler 被阻塞超过 1 LOOP（~7.5s），
-  //    直接重锚到 now + 0.1s，避免疯狂补排几千个音符
-  if (nextLoopTime < now - LOOP) {
-    nextLoopTime = now + 0.1;
+  // melody — triangle wave
+  for (const [off, note, dur] of melody) {
+    const osc = offline.createOscillator();
+    const g = offline.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = noteFreq[note];
+    const t = off * BEAT;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.12, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur * BEAT * 0.9);
+    osc.connect(g); g.connect(master);
+    osc.start(t); osc.stop(t + dur * BEAT * 0.9 + 0.05);
   }
 
-  // 3) 预排 3 秒（比之前多 1s），给调度器 2~3 个 tick 的容错空间
-  while (nextLoopTime < now + 3.0) {
-    const ls = nextLoopTime;
-    for (const [off, note, dur] of melody) {
-      playTone(noteFreq[note], ls + off * BEAT, dur * BEAT * 0.9, 'triangle', 0.12);
-    }
-    for (const [off, note, dur] of bass) {
-      playTone(noteFreq[note], ls + off * BEAT, dur * BEAT * 0.8, 'sawtooth', 0.18);
-    }
-    for (let b = 0; b < 4; b++) {
-      const bt = ls + b * BEAT;
-      playKick(bt);
-      playHat(bt + BEAT * 0.5);
-    }
-    nextLoopTime += LOOP;
+  // bass — sawtooth
+  for (const [off, note, dur] of bass) {
+    const osc = offline.createOscillator();
+    const g = offline.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.value = noteFreq[note];
+    const t = off * BEAT;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.18, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur * BEAT * 0.8);
+    osc.connect(g); g.connect(master);
+    osc.start(t); osc.stop(t + dur * BEAT * 0.8 + 0.05);
   }
 
-  // 4) 调度器用 setTimeout，固定 500ms 间隔
-  //    原因：rAF 在页面不可见（切 app / 息屏）时完全停止 → 直接死循环断音
-  //    setTimeout 是唯一可靠保活的方案
-  //    间隔 500ms 足够（每次预排 3s，500ms 一次的话永远有 6x 备份）
-  schedulerTimer = setTimeout(scheduleMusic, 500);
+  // kicks + hats（每 BAR 4 个）
+  for (let b = 0; b < 4; b++) {
+    const bt = b * BEAT;
+    // kick
+    const k = offline.createOscillator();
+    const kg = offline.createGain();
+    k.frequency.setValueAtTime(120, bt);
+    k.frequency.exponentialRampToValueAtTime(40, bt + 0.12);
+    kg.gain.setValueAtTime(0.5, bt);
+    kg.gain.exponentialRampToValueAtTime(0.001, bt + 0.18);
+    k.connect(kg); kg.connect(master);
+    k.start(bt); k.stop(bt + 0.22);
+
+    // hi-hat — 每拍后半拍
+    const hatBufLen = Math.ceil(sampleRate * 0.06);
+    const hatBuf = offline.createBuffer(1, hatBufLen, sampleRate);
+    const hd = hatBuf.getChannelData(0);
+    for (let i = 0; i < hatBufLen; i++) hd[i] = Math.random() * 2 - 1;
+    const hat = offline.createBufferSource();
+    const hg = offline.createGain();
+    hat.buffer = hatBuf;
+    const ht = bt + BEAT * 0.5;
+    hg.gain.setValueAtTime(0.1, ht);
+    hg.gain.exponentialRampToValueAtTime(0.001, ht + 0.05);
+    hat.connect(hg); hg.connect(master);
+    hat.start(ht);
+  }
+
+  return offline.startRendering(); // Promise<AudioBuffer>
 }
 
 function startMusic() {
   initAudio();
   if (audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
   isPlaying = true;
-  musicStartTime = audioCtx.currentTime;
-  nextLoopTime = audioCtx.currentTime + 0.1;
-  scheduleMusic();
+  renderLoop().then(buffer => {
+    if (!isPlaying) return;
+    // 创建 AudioBufferSourceNode — 浏览器原生循环，100% 连续
+    musicSource = audioCtx.createBufferSource();
+    musicSource.buffer = buffer;
+    musicSource.loop = true;
+    musicSource.connect(musicGain);
+    musicSource.start();
+    musicStartTime = audioCtx.currentTime;
+  });
 }
 
-// ===== 页面可见性 / 前台唤醒保护 =====
-// 用户从后台切回时浏览器可能 suspend AudioContext 或重置时间基
+// ===== 页面隐藏后恢复（唯一需要的保护）=====
+// 浏览器可能 suspend AudioContext，回来时 resume 一下即可。
+// AudioBufferSourceNode.loop 本身不会断。
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && isPlaying) {
-    // 立刻恢复音频
     if (audioCtx && audioCtx.state !== 'running') audioCtx.resume().catch(() => {});
-    // 重置锚点：避免因为后台期间 audioCtx.currentTime 停止推进导致的 drift
-    if (audioCtx) {
-      nextLoopTime = audioCtx.currentTime + 0.1;
-    }
-    // 取消旧定时器，立即再排一次
-    if (schedulerTimer) clearTimeout(schedulerTimer);
-    scheduleMusic();
   }
 });
 
@@ -158,11 +155,19 @@ function getBeatProgress() {
   return ((audioCtx.currentTime - musicStartTime) % BAR) / BAR;
 }
 
+// ===== Spawn 音效（独立短音效，不走预渲染）=====
 function sfxPop() {
   if (!audioCtx || muted) return;
   const t = audioCtx.currentTime;
   const f = 400 + Math.random() * 400;
-  playTone(f, t, 0.08, 'sine', 0.1);
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'sine'; osc.frequency.value = f;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.1, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+  osc.connect(g); g.connect(musicGain);
+  osc.start(t); osc.stop(t + 0.1);
 }
 
 // ===== Dancers =====
